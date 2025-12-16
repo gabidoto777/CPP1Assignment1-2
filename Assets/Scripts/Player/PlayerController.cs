@@ -1,4 +1,10 @@
+using Unity.VisualScripting;
 using UnityEngine;
+
+
+[RequireComponent(typeof(Rigidbody2D), typeof(Collider2D), typeof(SpriteRenderer))]
+[RequireComponent(typeof(Animator))]
+
 
 public class controller : MonoBehaviour
 {
@@ -12,25 +18,29 @@ public class controller : MonoBehaviour
     SpriteRenderer sr;
     // Reference to the GroundCheck script
     GroundCheck groundCheckScript;
+    // Reference to the Animator component
+    Animator anim;
+
 
 
     // LayerMask to identify ground objects
     // LayerMask groundLayer;
 
-
+    public CoinPickUp coin;
 
     //Control variables
     // Movement speed of the player
     public float moveSpeed = 2f;
     // Radius for ground check
-    private float groundCheckRadius = 0.02f;
+    public float groundCheckRadius = 0.02f;
 
     public bool isGrounded = false;
 
-    private bool isFalling = false;
+    public bool isFalling = false;
 
+    private bool IgnoreInput = false;
 
-
+    private Shoot shoot;
 
 
 
@@ -48,9 +58,13 @@ public class controller : MonoBehaviour
         col = GetComponent<Collider2D>();
         // Get the SpriteRenderer component attached to the player
         sr = GetComponent<SpriteRenderer>();
-
-
+        // Get the Animator component attached to the player
+        anim = GetComponent<Animator>();
+        // Initialize the GroundCheck script
         groundCheckScript = new GroundCheck(col, LayerMask.GetMask("Ground"), groundCheckRadius);
+
+        shoot = GetComponent<Shoot>();
+
 
         //other option to
         //initialize ground check position using separate GameObject as a child of the player
@@ -65,6 +79,11 @@ public class controller : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+
+        if(Input.GetButtonDown("Fire1"))
+        {
+            shoot.Fire();
+        }
         
         isGrounded = groundCheckScript.CheckisGrounded();
 
@@ -75,6 +94,10 @@ public class controller : MonoBehaviour
             rb.gravityScale = 3f; //increase gravity when falling
         }
 
+        if (isFalling && isGrounded) {
+            rb.gravityScale += 1;
+        }
+
         // Get horizontal input
         float hValue = Input.GetAxis("Horizontal");
 
@@ -83,8 +106,8 @@ public class controller : MonoBehaviour
         // Smoothly update the player's horizontal velocity
         rb.linearVelocity = Vector2.Lerp(rb.linearVelocity, new Vector2(hValue * moveSpeed, rb.linearVelocity.y), 0.1f);
 
-        //if (hValue != 0)
-           // sr.flipX = hValue < 0;
+        if (hValue != 0)
+            sr.flipX = hValue < 0;
 
         // Jump when the jump button is pressed
         if (Input.GetButtonDown("Jump") && isGrounded)
@@ -93,5 +116,20 @@ public class controller : MonoBehaviour
             rb.AddForce(Vector2.up * 12f, ForceMode2D.Impulse);
         }
 
+        // Update animator parameters
+        anim.SetFloat("hValue", Mathf.Abs(hValue));
+        anim.SetBool("isGrounded", isGrounded);
+        anim.SetFloat("vValue", Mathf.Abs(vValue));
     }
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (other.gameObject.CompareTag("Coin"))
+        {
+            Destroy(other.gameObject);
+            coin.coinCount++;
+        }
+
+    }
+
 }
